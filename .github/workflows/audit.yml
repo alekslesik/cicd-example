@@ -1,0 +1,55 @@
+name: Audit
+
+# Действие "Audit" выполняется при каждом push'е в ветку main и при создании pull request'а в ветку main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Определен один job с именем "audit", который будет выполняться на операционной системе Ubuntu 22.04
+jobs:
+
+  audit:
+    # Это действие используется для клонирования репозитория в рабочем пространстве для последующих шагов
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+
+    # Это действие устанавливает и настраивает версию Go, указанную как 1.21
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.21
+
+    # Этот шаг используется для проверки зависимостей проекта
+    - name: Verify dependencies
+      run: go mod verify
+
+    # Здесь происходит сборка проекта с помощью go build
+    - name: Build
+      run: go build -v ./...
+
+    #  Используется инструмент go vet для статической проверки кода на наличие ошибок
+    - name: Run go vet
+      run: go vet ./...
+
+    # Устанавливается инструмент staticcheck
+    - name: Install staticcheck
+      run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+    # Устанавливается инструмент staticcheck
+    - name: Run staticcheck
+      run: staticcheck ./...
+
+    # Устанавливается инструмент golint
+    - name: Install golint
+      run: go install golang.org/x/lint/golint@latest
+
+    # Запускается golint для проверки стиля кода
+    - name: Run golint
+      run: golint ./...
+
+    # Запускаются тесты проекта с включением опции -race для обнаружения гонок данных, а также с отключением проверки веток (-vet=off)
+    - name: Run tests
+      run: go test -race -vet=off ./...
